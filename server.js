@@ -6,15 +6,10 @@ const { v4: uuidv4 } = require("uuid");
 const path = require("path");
 
 const app = express();
-
-// Enable CORS for all origins
-app.use(cors());
-
-// Serve static files from 'public' directory
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
+app.use(cors);
 
-// Multer configuration for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) =>
     cb(null, path.join(__dirname, "public/images")),
@@ -22,7 +17,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// In-memory projects data
 let projects = [
   // initial sample data
   {
@@ -55,7 +49,6 @@ let projects = [
   },
 ];
 
-// Validation function
 function validateProject(body) {
   const schema = Joi.object({
     _id: Joi.string().allow(""),
@@ -69,17 +62,13 @@ function validateProject(body) {
   return schema.validate(body);
 }
 
-// Routes
-app.get("/api/projects", (req, res) => {
-  res.json(projects);
-});
+app.get("/api/projects", (req, res) => res.json(projects));
 
 app.post("/api/projects", upload.single("img"), (req, res) => {
   const { error } = validateProject(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  let skills = [];
-  let contributions = [];
+  let skills, contributions;
   try {
     skills = JSON.parse(req.body.skills);
     contributions = JSON.parse(req.body.contributions);
@@ -128,11 +117,7 @@ app.delete("/api/projects/:id", (req, res) => {
   res.json(deleted);
 });
 
-// Serve index.html
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 
-// Start server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
