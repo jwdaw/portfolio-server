@@ -5,10 +5,10 @@ const Joi = require("joi");
 const { v4: uuidv4 } = require("uuid");
 const app = express();
 
-// Enable CORS for all requests
+// Update your CORS configuration to ensure images can be accessed
 app.use(
   cors({
-    origin: "*",
+    origin: ["https://jwdaw.github.io", "http://localhost:3000"], // Specify allowed origins
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -19,7 +19,16 @@ app.use(
 // Add this line to serve static files from the public directory
 app.use(express.static("public"));
 
-app.use(express.static("public"));
+// Add this middleware after your CORS configuration
+app.use("/images", (req, res, next) => {
+  res.set({
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET",
+    "Cache-Control": "public, max-age=86400",
+  });
+  next();
+});
+
 app.use(express.json());
 
 const storage = multer.diskStorage({
