@@ -6,7 +6,21 @@ const { v4: uuidv4 } = require("uuid");
 const app = express();
 
 // Enable CORS for all requests
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    exposedHeaders: ["Content-Length", "Content-Type"],
+  })
+);
+
+// Add this line to ensure OPTIONS requests are handled properly
+app.options("*", cors());
+
+// Add this line to serve static files from the public directory
+app.use(express.static("public"));
 
 app.use(express.static("public"));
 app.use(express.json());
