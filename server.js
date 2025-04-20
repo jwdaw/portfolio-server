@@ -5,19 +5,21 @@ const Joi = require("joi");
 const { v4: uuidv4 } = require("uuid");
 const app = express();
 
-// For development, you could use a simpler CORS setup
+// Improved CORS configuration
 app.use(
   cors({
-    origin: "*", // Allow all origins
+    origin: ["http://localhost:3000", "https://jwdaw.github.io"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true, // Allow cookies and credentials
+    optionsSuccessStatus: 204, // Some legacy browsers (IE11) choke on 204
   })
 );
 
 // Add this line to serve static files from the public directory
 app.use(express.static("public"));
 
-// Replace your current /images middleware with this enhanced version
+// Enhanced middleware for images
 app.use("/images", (req, res, next) => {
   // Set comprehensive CORS headers specifically for images
   res.set({
