@@ -17,12 +17,17 @@ app.use(
 // Add this line to serve static files from the public directory
 app.use(express.static("public"));
 
-// Add this middleware after your CORS configuration
+// Replace your current /images middleware with this enhanced version
 app.use("/images", (req, res, next) => {
+  // Set comprehensive CORS headers specifically for images
   res.set({
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Origin, X-Requested-With, Content-Type, Accept",
+    "Access-Control-Max-Age": "86400", // 24 hours
     "Cache-Control": "public, max-age=86400",
+    Vary: "Origin", // Important for caching with CORS
   });
   next();
 });
