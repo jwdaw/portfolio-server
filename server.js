@@ -5,14 +5,12 @@ const Joi = require("joi");
 const { v4: uuidv4 } = require("uuid");
 const app = express();
 
-// Update your CORS configuration to ensure images can be accessed
+// For development, you could use a simpler CORS setup
 app.use(
   cors({
-    origin: ["https://jwdaw.github.io", "http://localhost:3000"], // Specify allowed origins
+    origin: "*", // Allow all origins
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-    exposedHeaders: ["Content-Length", "Content-Type"],
   })
 );
 
