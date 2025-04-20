@@ -5,15 +5,11 @@ const Joi = require("joi");
 const { v4: uuidv4 } = require("uuid");
 const app = express();
 
+// Enable CORS for all requests
+app.use(cors());
+
 app.use(express.static("public"));
 app.use(express.json());
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -123,7 +119,7 @@ app.post("/api/projects", upload.single("img"), (req, res) => {
   }
 
   const project = {
-    _id: req.body._id || crypto.randomUUID(),
+    _id: req.body._id || uuidv4(),
     name: req.body.name,
     desc: req.body.desc,
     skills: skills,
@@ -131,7 +127,7 @@ app.post("/api/projects", upload.single("img"), (req, res) => {
   };
 
   if (req.file) {
-    project.image = `public/images/${req.file.filename}`;
+    project.image = `images/${req.file.filename}`;
     console.log("Image path set to:", project.image);
   }
 
@@ -156,7 +152,67 @@ const validateProject = (project) => {
   return schema.validate(project);
 };
 
+app.put("/api/projects/:id", upload.single("img"), (req, res) => {
+  const project = projects.find((project) => project._id === req.params.id);
+
+  if (!project) {
+    res.status(404).send("The project with the provided ID was not found");
+    return;
+  }
+
+  const result = validateProject(req.body);
+
+  if (result.error) {
+    res.status(400).send(result.error.details[0].message);
+    return;
+  }
+
+  let skills = [];
+  let contributions = [];
+
+  try {
+    if (req.body.skills) {
+      skills = JSON.parse(req.body.skills);
+    }
+    if (req.body.contributions) {
+      contributions = JSON.parse(req.body.contributions);
+    }
+  } catch (e) {
+    console.log("JSON Parse Error:", e);
+    res.status(400).send("Invalid JSON format in skills or contributions");
+    return;
+  }
+
+  project.name = req.body.name;
+  project.desc = req.body.desc;
+  project.skills = skills;
+  project.contributions = contributions;
+
+  if (req.file) {
+    project.image = `images/${req.file.filename}`;
+  }
+
+  res.status(200).json(project);
+});
+
+app.delete("/api/projects/:id", (req, res) => {
+  console.log("Attempting to delete " + req.params.id);
+  const project = projects.find((project) => project._id === req.params.id);
+
+  if (!project) {
+    console.log("Could not find project");
+    res.status(404).send("The project with the provided ID was not found");
+    return;
+  }
+
+  console.log("Project Found!");
+  console.log("The Project being deleted is " + project.name);
+  const index = projects.indexOf(project);
+  projects.splice(index, 1);
+  res.status(200).json(project);
+});
+
 // Start server
 app.listen(3001, () => {
-  console.log("Server running on port 3000");
+  console.log("Server running on port 3001");
 });
