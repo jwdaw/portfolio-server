@@ -16,9 +16,6 @@ app.use(
   })
 );
 
-// Add this line to ensure OPTIONS requests are handled properly
-app.options("*", cors());
-
 // Add this line to serve static files from the public directory
 app.use(express.static("public"));
 
