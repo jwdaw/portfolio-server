@@ -5,11 +5,9 @@ const Joi = require("joi");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 const path = require("path");
-
 const app = express();
-// Serve image files from public/images under /images
+
 app.use("/images", express.static(path.join(__dirname, "public", "images")));
-// Serve other static assets from public
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 app.use(cors());
@@ -21,37 +19,25 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-let projects = [
-  // initial sample data
-  {
-    _id: "8f298c04-00ed-42bc-b8f7-eaf3ec6ce5df",
-    name: "DaVinci Academia",
-    image: "images/Davinci.png",
-    desc: "DaVinci Academia is a recreation of a University Course and Major review system...",
-    skills: ["Java", "JSON", "Unit Testing"],
-    contributions: [
-      { url: "https://github.com/Shreklord", name: "Anthony Goldhammer" },
-      { url: "https://github.com/olliekod", name: "Oliver Meihls" },
-      { url: "https://github.com/sphilips04", name: "Spencer Philips" },
-    ],
-  },
-  {
-    _id: "31655518-db2b-4727-bbaa-bf06c78417cb",
-    name: "PostOne",
-    image: "images/PostOne.GIF",
-    desc: "PostOne is a Smart Mailbox attachment created at 2025 CUHackit Hackathon...",
-    skills: ["Python", "AWS", "Lambda Functions"],
-    contributions: [{ name: "Personal Project" }],
-  },
-  {
-    _id: "4f655518-ab2c-8321-cdaa-bf06c78417ee",
-    name: "JWD Portfolio",
-    image: "images/JWDPortfolio.png",
-    desc: "This is my personal portfolio website built using React and Bootstrap...",
-    skills: ["HTML", "CSS", "JavaScript", "React"],
-    contributions: [{ name: "Personal Project" }],
-  },
-];
+mongoose
+  .connect("mongodb+srv://jwdaw:jwdaw@portfoliocluster.9kytcmq.mongodb.net/")
+  .then(() => {
+    console.log("connected to mongodb");
+  })
+  .catch((error) => {
+    console.log("couldn't connect to mongodb", error);
+  });
+
+const projectSchema = new mongoose.Schema({
+  name: String,
+  desc: String,
+  skills: [String],
+  contributions: [{ name: String }],
+  github: String,
+  image: String,
+});
+
+const Project = mongoose.model("Project", projectSchema);
 
 function validateProject(body) {
   const schema = Joi.object({
@@ -60,15 +46,16 @@ function validateProject(body) {
     desc: Joi.string().required(),
     skills: Joi.string().required(),
     contributions: Joi.string().required(),
-    github: Joi.string().allow(""),
-    devpost: Joi.string().allow(""),
   });
   return schema.validate(body);
 }
 
-app.get("/api/projects", (req, res) => res.json(projects));
+app.get("/api/projects", async (req, res) => {
+  const projects = await Project.find();
+  res.send(projects);
+});
 
-app.post("/api/projects", upload.single("img"), (req, res) => {
+app.post("/api/projects", upload.any(), async (req, res) => {
   const { error } = validateProject(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
@@ -80,45 +67,58 @@ app.post("/api/projects", upload.single("img"), (req, res) => {
     return res.status(400).send("Invalid JSON in skills or contributions");
   }
 
-  const project = {
-    _id: req.body._id || uuidv4(),
+  // Log file information for debugging
+  console.log("Received files:", req.files);
+
+  const project = new Project({
     name: req.body.name,
     desc: req.body.desc,
     skills,
     contributions,
-    image: req.file ? `images/${req.file.filename}` : undefined,
-  };
+    github: req.body.github,
+    image: req.body.filename,
+  });
 
-  projects.push(project);
-  res.json(project);
+  const newProject = await project.save();
+  res.status(200).send(newProject);
 });
 
-app.put("/api/projects/:id", upload.single("img"), (req, res) => {
-  const project = projects.find((p) => p._id === req.params.id);
-  if (!project) return res.status(404).send("Project not found");
-
+app.put("/api/projects/:id", upload.any(), async (req, res) => {
   const { error } = validateProject(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
+  let skills, contributions;
   try {
-    project.skills = JSON.parse(req.body.skills);
-    project.contributions = JSON.parse(req.body.contributions);
+    skills = JSON.parse(req.body.skills);
+    contributions = JSON.parse(req.body.contributions);
   } catch {
     return res.status(400).send("Invalid JSON in skills or contributions");
   }
 
-  project.name = req.body.name;
-  project.desc = req.body.desc;
-  if (req.file) project.image = `images/${req.file.filename}`;
+  // Log file information for debugging
+  console.log("Received files on PUT:", req.files);
 
-  res.json(project);
+  const updateData = {
+    name: req.body.name,
+    desc: req.body.desc,
+    skills,
+    contributions,
+    github: req.body.github,
+    image: req.body.filename,
+  };
+
+  const project = await Project.findByIdAndUpdate(req.params.id, updateData, {
+    new: true,
+  });
+  if (!project) return res.status(404).send("Project not found");
+
+  res.status(200).send(project);
 });
 
-app.delete("/api/projects/:id", (req, res) => {
-  const index = projects.findIndex((p) => p._id === req.params.id);
-  if (index === -1) return res.status(404).send("Project not found");
-  const [deleted] = projects.splice(index, 1);
-  res.json(deleted);
+app.delete("/api/projects/:id", async (req, res) => {
+  const project = await Project.findByIdAndDelete(req.params.id);
+  if (!project) return res.status(404).send("Project not found");
+  res.json(project);
 });
 
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
